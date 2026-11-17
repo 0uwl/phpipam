@@ -244,9 +244,30 @@ class Subnets extends Common_functions
     {
         $values = $this->subnet_check_values($values);
 
+        // reuse saved subnet id if enabled
+        $this->get_settings();
+        $keep_ids = $this->settings->reuseDeletedIds == 1 && empty($values['isFolder']);
+        $id_reused = false;
+        if ($keep_ids) {
+            $released = $this->Database->getObjectQuery('subnets_released',
+                'SELECT r.`id`, s.`id` IS NOT NULL AS `taken` FROM `subnets_released` r LEFT JOIN `subnets` s ON s.`id` = r.`id` '.
+                'WHERE r.`sectionId` = ? AND r.`vrfId` = ? AND r.`subnet` = ? AND r.`mask` = ?;',
+                [$values['sectionId'], $values['vrfId'] ?? 0, $values['subnet'], $values['mask']]);
+            if (is_object($released) && ! $released->taken) {
+                $values['id'] = $released->id;
+                $id_reused = true;
+            } elseif (is_object($released)) {
+                // id taken, remove its saved address ids
+                try {
+                    $this->Database->deleteRow('ipaddresses_released', 'subnetId', $released->id);
+                } catch (Exception $exception) {
+                }
+            }
+        }
+
         // execute
         try {
-            $this->Database->insertObject('subnets', $values);
+            $this->Database->insertObject('subnets', $values, false, false, ! $id_reused);
         } catch (Exception $exception) {
             $this->Result->warn('danger', _('Error: ').$exception->getMessage());
             $this->Log->write(_('Subnet creation'), _('Failed to add new subnet').'.<hr>'.$exception->getMessage(), 2);
@@ -254,9 +275,18 @@ class Subnets extends Common_functions
             return false;
         }
 
-        // save id
-        $this->lastInsertId = $this->Database->lastInsertId();
+        // save inserted id
+        $this->lastInsertId = $id_reused ? $values['id'] : $this->Database->lastInsertId();
         $values['id'] = $this->lastInsertId;
+
+        // remove saved id
+        if ($keep_ids) {
+            try {
+                $this->Database->runQuery('DELETE FROM `subnets_released` WHERE `sectionId` = ? AND `vrfId` = ? AND `subnet` = ? AND `mask` = ?;',
+                    [$values['sectionId'], $values['vrfId'] ?? 0, $values['subnet'], $values['mask']]);
+            } catch (Exception $exception) {
+            }
+        }
         // ok
         $this->Log->write(_('Subnet creation'), _('New subnet created').'.<hr>'.$this->array_to_log($this->reformat_empty_array_fields($values, 'NULL')), 0);
         // write changelog
@@ -338,8 +368,17 @@ class Subnets extends Common_functions
         // truncate own subnet
         $this->subnet_truncate($id);
 
-        // delete subnet
+        // save id and delete subnet
+        $this->get_settings();
+        $keep_ids = $this->settings->reuseDeletedIds == 1;
         try {
+            if ($keep_ids) {
+                $this->Database->runQuery(
+                    'REPLACE INTO `subnets_released` (`sectionId`, `vrfId`, `subnet`, `mask`, `id`) '.
+                    'SELECT `sectionId`, COALESCE(`vrfId`, 0), `subnet`, `mask`, `id` FROM `subnets` '.
+                    'WHERE `id` = ? AND `isFolder` = 0 AND `sectionId` IS NOT NULL AND `subnet` IS NOT NULL AND `mask` IS NOT NULL;',
+                    [$id]);
+            }
             $this->Database->deleteRow('subnets', 'id', $id);
         } catch (Exception $exception) {
             $this->Log->write(_('Subnet delete'), _('Failed to delete subnet').' '.$old_subnet->name.'.<hr>'.$exception->getMessage(), 2);
