@@ -484,6 +484,38 @@ class Common_functions
     }
 
     /**
+     * Remember database IDs of addresses about to be deleted so a later re-add of the
+     * same IP in the same subnet can reuse them (settings->reuseDeletedIds).
+     * Takes the same WHERE fields as the deleteRow() call it precedes.
+     *
+     * @param  string  $field
+     * @param  mixed  $value
+     * @param  string|null  $field2
+     * @param  mixed  $value2
+     * @return void
+     */
+    protected function save_released_address_ids($field, $value, $field2 = null, $value2 = null)
+    {
+        $this->get_settings();
+        if ($this->settings->reuseDeletedIds != 1) {
+            return;
+        }
+
+        $where = '`'.$this->Database->escape($field).'` = ?';
+        $values = [$value];
+        if (! empty($field2)) {
+            $where .= ' AND `'.$this->Database->escape($field2).'` = ?';
+            $values[] = $value2;
+        }
+
+        $this->Database->runQuery(
+            'REPLACE INTO `ipaddresses_released` (`subnetId`, `ip_addr`, `id`) '.
+            'SELECT `subnetId`, `ip_addr`, `id` FROM `ipaddresses` WHERE '.$where.' AND `subnetId` IS NOT NULL;',
+            $values
+        );
+    }
+
+    /**
      * Write result to cache.
      *
      * @param  string  $table

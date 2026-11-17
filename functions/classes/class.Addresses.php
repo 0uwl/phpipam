@@ -434,9 +434,23 @@ class Addresses extends Common_functions
             $this->remove_gateway($address['subnetId']);
         }
 
+        // reuse the id this ip had before it was deleted, if enabled and that id is still free
+        $this->get_settings();
+        $id_reused = false;
+        if ($this->settings->reuseDeletedIds == 1) {
+            $released = $this->Database->getObjectQuery('ipaddresses_released',
+                'SELECT r.`id` FROM `ipaddresses_released` r LEFT JOIN `ipaddresses` a ON a.`id` = r.`id` '.
+                'WHERE r.`subnetId` = ? AND r.`ip_addr` = ? AND a.`id` IS NULL;',
+                [$address['subnetId'], $address['ip_addr']]);
+            if (is_object($released)) {
+                $address['id'] = $released->id;
+                $id_reused = true;
+            }
+        }
+
         // execute
         try {
-            $this->Database->insertObject('ipaddresses', $address);
+            $this->Database->insertObject('ipaddresses', $address, false, false, ! $id_reused);
         } catch (Exception $exception) {
             $this->Log->write(_('Address create'), _('Failed to create new address').'.<hr>'.$exception->getMessage().'<hr>'.$this->array_to_log($this->reformat_empty_array_fields($address, 'NULL')), 2);
             $this->Result->warn('danger', _('Error: ').$exception->getMessage());
@@ -444,8 +458,16 @@ class Addresses extends Common_functions
             return false;
         }
 
-        // save id
-        $this->lastId = $this->Database->lastInsertId();
+        // save inserted id
+        $this->lastId = $id_reused ? $address['id'] : $this->Database->lastInsertId();
+
+        // remove saved id
+        if ($this->settings->reuseDeletedIds == 1) {
+            try {
+                $this->Database->deleteRow('ipaddresses_released', 'subnetId', $address['subnetId'], 'ip_addr', $address['ip_addr']);
+            } catch (Exception $exception) {
+            }
+        }
 
         // log and changelog
         $address['id'] = $this->lastId;
@@ -551,6 +573,7 @@ class Addresses extends Common_functions
 
         // execute
         try {
+            $this->save_released_address_ids($field, $value, $field2, $value2);
             $this->Database->deleteRow('ipaddresses', $field, $value, $field2, $value2);
         } catch (Exception $exception) {
             $this->Log->write(_('Address delete'), _('Failed to delete address').' '.$address['ip_addr'].'.<hr>'.$exception->getMessage().'<hr>'.$this->array_to_log((array) $address_old), 2);

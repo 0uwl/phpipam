@@ -371,6 +371,7 @@ class Subnets extends Common_functions
         $old_subnet = $this->fetch_subnet(null, $subnetId);
         // execute
         try {
+            $this->save_released_address_ids('subnetId', $subnetId);
             $this->Database->deleteRow('ipaddresses', 'subnetId', $subnetId);
         } catch (Exception $exception) {
             $this->Log->write(_('Subnet truncate'), _('Failed to truncate subnet').' '.$old_subnet->description.' '._('id').' '.$old_subnet->id.'.<hr>'.$exception->getMessage(), 2);
