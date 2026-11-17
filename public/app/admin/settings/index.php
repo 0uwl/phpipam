@@ -385,6 +385,19 @@ foreach ($durations as $k => $d) {
     </td>
 </tr>
 
+<!-- Reuse address IDs -->
+<tr>
+    <td class="title"><?php print _('Keep subnet and IP address IDs'); ?></td>
+    <td>
+        <input type="checkbox" value="1" class="input-switch" name="reuseDeletedIds" <?php if ($settings['reuseDeletedIds'] == 1) {
+            print 'checked';
+        } ?>>
+    </td>
+    <td class="info2">
+        <?php print _('Reuse the database ID a deleted subnet (same section, VRF and network) or IP address (same subnet) had when it is added again'); ?>
+    </td>
+</tr>
+
 <!-- Multicast -->
 <tr>
     <td class="title"><?php print _('Multicast module'); ?></td>

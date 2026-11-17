@@ -5703,3 +5703,13 @@ msgstr ""
 
 msgid "BGP type"
 msgstr ""
+
+
+
+### 2.0
+
+msgid "Keep subnet and IP address IDs"
+msgstr ""
+
+msgid "Reuse the database ID a deleted subnet (same section, VRF and network) or IP address (same subnet) had when it is added again"
+msgstr ""

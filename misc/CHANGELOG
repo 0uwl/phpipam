@@ -9,6 +9,7 @@
     Enhancements, changes:
     ----------------------------
     + Add vendormacs.json update script to functions/scripts;
+    + Optionally keep subnet and IP address database IDs when they are deleted and re-created;
 
 == 1.9.0
 
