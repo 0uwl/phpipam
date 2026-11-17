@@ -226,6 +226,7 @@ CREATE TABLE `settings` (
   `2fa_name` VARCHAR(32)  NULL  DEFAULT 'phpipam',
   `2fa_userchange` BOOL  NOT NULL  DEFAULT '1',
   `passkeys` TINYINT(1)  NULL  DEFAULT '1',
+  `reuseDeletedIds` TINYINT(1)  NOT NULL  DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /* insert default values */
@@ -1053,6 +1054,34 @@ CREATE TABLE `vaultItems` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
+# Dump of table ipaddresses_released
+# ------------------------------------------------------------
+DROP TABLE IF EXISTS `ipaddresses_released`;
+
+CREATE TABLE `ipaddresses_released` (
+  `subnetId` INT(11) UNSIGNED NOT NULL,
+  `ip_addr` varchar(100) NOT NULL,
+  `id` int(11) NOT NULL,
+  `released` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`subnetId`,`ip_addr`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+# Dump of table subnets_released
+# ------------------------------------------------------------
+DROP TABLE IF EXISTS `subnets_released`;
+
+CREATE TABLE `subnets_released` (
+  `sectionId` INT(11) UNSIGNED NOT NULL,
+  `vrfId` INT(11) UNSIGNED NOT NULL DEFAULT 0,
+  `subnet` VARCHAR(255) NOT NULL,
+  `mask` VARCHAR(3) NOT NULL,
+  `id` int(11) NOT NULL,
+  `released` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`sectionId`,`vrfId`,`subnet`,`mask`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 # Dump of table passkeys
 # ------------------------------------------------------------
 DROP TABLE IF EXISTS `passkeys`;
@@ -1103,4 +1132,4 @@ CREATE TABLE `nominatim_cache` (
 # ------------------------------------------------------------
 
 UPDATE `settings` SET `version` = "2.0";
-UPDATE `settings` SET `dbversion` = 48;
+UPDATE `settings` SET `dbversion` = 49;
