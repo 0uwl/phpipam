@@ -183,6 +183,13 @@ class Sections extends Common_functions
 
                 return false;
             }
+
+            // clear saved IDs for this section
+            try {
+                $this->Database->runQuery('DELETE a FROM `ipaddresses_released` a JOIN `subnets_released` s ON s.`id` = a.`subnetId` WHERE s.`sectionId` = ?;', [$id]);
+                $this->Database->deleteRow('subnets_released', 'sectionId', $id);
+            } catch (Exception $e) {
+            }
         }
 
         // write changelog

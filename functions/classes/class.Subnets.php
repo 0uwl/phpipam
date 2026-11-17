@@ -390,6 +390,14 @@ class Subnets extends Common_functions
         // remove from NAT
         $this->remove_subnet_nat_items($id, true);
 
+        // remove saved address ids
+        if (! $keep_ids) {
+            try {
+                $this->Database->deleteRow('ipaddresses_released', 'subnetId', $id);
+            } catch (Exception $exception) {
+            }
+        }
+
         // write changelog
         $this->Log->write_changelog('subnet', 'delete', 'success', $old_subnet, []);
         // ok
